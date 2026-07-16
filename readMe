@@ -1,0 +1,38 @@
+GeoBake/
+
+core/
+    scene.py
+    collection.py
+    logger.py
+
+grid/
+    grid_cell.py
+    grid_generator.py
+    grid_drawer.py
+    grid_labeler.py
+    grid_manager.py
+
+pipeline/
+    pipeline.py            <-- Main Pipeline
+    workspace.py           <-- Duplicate meshes
+    clipper.py             <-- Boolean clip
+    cleaner.py             <-- Remove unwanted geometry
+    uv_generator.py        <-- Generate UV
+    exporter.py            <-- Export FBX
+    baker.py               <-- Bake all cage distances
+    cleanup.py             <-- Delete temporary workspace
+
+main.py
+
+
+
+
+manager.generate(
+        min_x=0,
+        min_y=0,
+        max_x=2500,
+        max_y=2500,
+        chunk_size=500,
+        draw_labels=True,
+        label_size=40,
+        label_height=2,
