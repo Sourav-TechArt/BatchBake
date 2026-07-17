@@ -1,6 +1,7 @@
 import bpy
 import os
 
+from utils.blender_context import BlenderContext
 from .material_setup import MaterialSetup
 
 
@@ -16,6 +17,8 @@ class Baker:
         self.material = MaterialSetup()
 
     # --------------------------------------------------
+    # Bake
+    # --------------------------------------------------
 
     def bake(
         self,
@@ -29,6 +32,12 @@ class Baker:
         bake_distances,
     ):
 
+        if plateau is None:
+            raise ValueError("Plateau object is None.")
+
+        if bing is None:
+            raise ValueError("Bing object is None.")
+
         print(f"\nBaking : {cell.label}")
 
         self.setup_cycles(samples)
@@ -40,7 +49,7 @@ class Baker:
 
             distance = bake["distance"]
 
-            print(f"\nBake {distance}m")
+            print(f"\nBake Distance : {distance}m")
 
             image = self.material.prepare(
 
@@ -70,24 +79,38 @@ class Baker:
 
             )
 
-            bpy.ops.object.bake(
-                type='DIFFUSE'
-            )
+            bpy.context.view_layer.update()
 
-            self.save_image(
+            try:
 
-                image,
+                bpy.ops.object.bake(
+                    type='DIFFUSE'
+                )
 
-                output_folder,
+                self.save_image(
 
-                cell,
+                    image,
 
-                distance,
+                    output_folder,
 
-            )
+                    cell,
+
+                    distance,
+
+                )
+
+            except RuntimeError as e:
+
+                print(f"Bake failed ({distance}m)")
+
+                print(e)
+
+        BlenderContext.object_mode()
 
         print("\nBake Finished")
 
+    # --------------------------------------------------
+    # Setup Cycles
     # --------------------------------------------------
 
     def setup_cycles(
@@ -103,6 +126,8 @@ class Baker:
 
         scene.cycles.samples = samples
 
+    # --------------------------------------------------
+    # Bake Settings
     # --------------------------------------------------
 
     def setup_bake_settings(
@@ -132,6 +157,8 @@ class Baker:
         scene.render.bake.use_pass_color = True
 
     # --------------------------------------------------
+    # Select Objects
+    # --------------------------------------------------
 
     def select_objects(
         self,
@@ -139,14 +166,16 @@ class Baker:
         bing,
     ):
 
-        bpy.ops.object.select_all(action='DESELECT')
+        BlenderContext.activate_multiple(
 
-        bing.select_set(True)
+            active_object=plateau,
 
-        plateau.select_set(True)
+            selected_objects=[bing, plateau],
 
-        bpy.context.view_layer.objects.active = plateau
+        )
 
+    # --------------------------------------------------
+    # Save Image
     # --------------------------------------------------
 
     def save_image(
@@ -157,14 +186,23 @@ class Baker:
         cage_distance,
     ):
 
+        if image is None:
+            raise ValueError("Bake image is None.")
+
         folder = os.path.join(
+
             output_folder,
+
             cell.label,
+
         )
 
         os.makedirs(
+
             folder,
+
             exist_ok=True,
+
         )
 
         filepath = os.path.join(

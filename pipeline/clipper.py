@@ -1,4 +1,12 @@
+import os
+
+print("=" * 60)
+print("LOADED CLIPPER:")
+print(__file__)
+print("=" * 60)
 import bpy
+
+from utils.blender_context import BlenderContext
 
 
 class Clipper:
@@ -25,20 +33,28 @@ class Clipper:
 
         cube = self.create_clip_box(cell)
 
-        self.boolean_object(
-            plateau,
-            cube,
-        )
+        try:
 
-        self.boolean_object(
-            bing,
-            cube,
-        )
+            self.boolean_object(
+                plateau,
+                cube,
+            )
 
-        bpy.data.objects.remove(
-            cube,
-            do_unlink=True,
-        )
+            self.boolean_object(
+                bing,
+                cube,
+            )
+
+        finally:
+
+            if cube is not None and cube.name in bpy.data.objects:
+
+                bpy.data.objects.remove(
+                    cube,
+                    do_unlink=True,
+                )
+
+            BlenderContext.ensure_view_layer()
 
         print("Clipping Finished")
 
@@ -54,25 +70,26 @@ class Clipper:
         center_x = (cell.min_x + cell.max_x) * 0.5
         center_y = (cell.min_y + cell.max_y) * 0.5
 
-        bpy.ops.object.mode_set(mode='OBJECT')
+        # Safe even if there is no active object
+        BlenderContext.object_mode()
 
-        bpy.ops.mesh.primitive_cube_add()
+        BlenderContext.deselect_all()
+
+        bpy.ops.mesh.primitive_cube_add(
+            location=(center_x, center_y, 0)
+        )
 
         cube = bpy.context.active_object
 
         cube.name = "GeoBake_ClipBox"
-
-        cube.location = (
-            center_x,
-            center_y,
-            0,
-        )
 
         cube.scale = (
             (width + self.CLIP_MARGIN) * 0.5,
             (height + self.CLIP_MARGIN) * 0.5,
             self.CLIP_HEIGHT,
         )
+
+        BlenderContext.ensure_view_layer()
 
         return cube
 
@@ -87,13 +104,20 @@ class Clipper:
     ):
 
         if obj is None:
-            return
+            raise ValueError("Object is None.")
 
-        bpy.ops.object.select_all(action='DESELECT')
+        if cutter is None:
+            raise ValueError("Clip box is None.")
 
-        obj.select_set(True)
+        if obj.name not in bpy.data.objects:
+            raise ValueError(f"Object '{obj.name}' no longer exists.")
 
-        bpy.context.view_layer.objects.active = obj
+        BlenderContext.activate(obj)
+
+        old_modifier = obj.modifiers.get("GeoBakeBoolean")
+
+        if old_modifier:
+            obj.modifiers.remove(old_modifier)
 
         modifier = obj.modifiers.new(
             name="GeoBakeBoolean",
@@ -101,11 +125,24 @@ class Clipper:
         )
 
         modifier.operation = 'INTERSECT'
-
         modifier.object = cutter
 
-        bpy.ops.object.modifier_apply(
-            modifier=modifier.name,
-        )
+        BlenderContext.ensure_view_layer()
 
-        print(f"{obj.name} clipped")
+        try:
+
+            bpy.ops.object.modifier_apply(
+                modifier=modifier.name,
+            )
+
+            print(f"{obj.name} clipped")
+
+        except RuntimeError as e:
+
+            raise RuntimeError(
+                f"Boolean failed on '{obj.name}':\n{e}"
+            )
+
+        finally:
+
+            BlenderContext.ensure_view_layer()

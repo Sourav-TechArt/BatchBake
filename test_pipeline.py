@@ -1,6 +1,6 @@
 import sys
 
-PROJECT_PATH = r"C:\Users\ASUS\Downloads\GeoBake\BatchBake"
+PROJECT_PATH = r"E:\Work\MAP_Rnd\GeoBake\BatchBake"
 
 if PROJECT_PATH not in sys.path:
     sys.path.append(PROJECT_PATH)

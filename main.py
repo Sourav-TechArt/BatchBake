@@ -1,7 +1,7 @@
 import sys
 import bpy
 
-PROJECT_PATH = r"C:\Users\ASUS\Downloads\GeoBake\BatchBake"
+PROJECT_PATH = r"E:\Work\MAP_Rnd\GeoBake\BatchBake"
 
 if PROJECT_PATH not in sys.path:
     sys.path.append(PROJECT_PATH)
@@ -35,8 +35,8 @@ def main():
     # Get Source Objects
     # --------------------------------------------------
 
-    plateau = bpy.data.objects.get("PLATEAU")
-    bing = bpy.data.objects.get("BING")
+    plateau = bpy.data.objects.get("plateau")
+    bing = bpy.data.objects.get("bing")
 
     if plateau is None:
         raise Exception("PLATEAU object not found.")

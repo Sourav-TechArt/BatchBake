@@ -1,5 +1,7 @@
 import bpy
 
+from utils.blender_context import BlenderContext
+
 
 class UVGenerator:
     """
@@ -22,30 +24,25 @@ class UVGenerator:
     def generate(self, plateau):
 
         if plateau is None:
-            print("No Plateau object supplied.")
-            return
+            raise ValueError("Plateau object is None.")
 
         print(f"\nGenerating UV : {plateau.name}")
 
         # --------------------------------------------------
-        # Select Object
+        # Activate Object
         # --------------------------------------------------
 
-        bpy.ops.object.select_all(action='DESELECT')
-
-        plateau.select_set(True)
-
-        bpy.context.view_layer.objects.active = plateau
-
-        # Make sure we're in Object Mode first
-        if bpy.context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
+        BlenderContext.activate(plateau)
 
         # --------------------------------------------------
         # Enter Edit Mode
         # --------------------------------------------------
 
         bpy.ops.object.mode_set(mode='EDIT')
+
+        # --------------------------------------------------
+        # Select All Faces
+        # --------------------------------------------------
 
         bpy.ops.mesh.select_all(action='SELECT')
 
@@ -76,6 +73,8 @@ class UVGenerator:
         # Return To Object Mode
         # --------------------------------------------------
 
-        bpy.ops.object.mode_set(mode='OBJECT')
+        BlenderContext.object_mode()
+
+        bpy.context.view_layer.update()
 
         print(f"{plateau.name} UV Finished")

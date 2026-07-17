@@ -1,6 +1,8 @@
 import bpy
 import os
 
+from utils.blender_context import BlenderContext
+
 
 class Exporter:
     """
@@ -25,7 +27,7 @@ class Exporter:
     ):
 
         if plateau is None:
-            return
+            raise ValueError("Plateau object is None.")
 
         # ------------------------------------------
         # Create Output Folder
@@ -47,17 +49,12 @@ class Exporter:
         )
 
         # ------------------------------------------
-        # Select Object
+        # Activate Object
         # ------------------------------------------
 
-        bpy.ops.object.select_all(action='DESELECT')
+        BlenderContext.activate(plateau)
 
-        plateau.select_set(True)
-
-        bpy.context.view_layer.objects.active = plateau
-
-        if bpy.context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.context.view_layer.update()
 
         # ------------------------------------------
         # Optional Triangulate Modifier
@@ -65,59 +62,73 @@ class Exporter:
 
         tri_modifier = None
 
-        if triangulate:
+        try:
 
-            tri_modifier = plateau.modifiers.new(
-                name="GeoBakeTriangulate",
-                type='TRIANGULATE',
+            if triangulate:
+
+                tri_modifier = plateau.modifiers.new(
+                    name="GeoBakeTriangulate",
+                    type='TRIANGULATE',
+                )
+
+                tri_modifier.keep_custom_normals = True
+
+            bpy.context.view_layer.update()
+
+            # ------------------------------------------
+            # Export FBX
+            # ------------------------------------------
+
+            bpy.ops.export_scene.fbx(
+
+                filepath=filepath,
+
+                use_selection=True,
+
+                object_types={'MESH'},
+
+                use_mesh_modifiers=True,
+
+                mesh_smooth_type='FACE',
+
+                bake_space_transform=False,
+
+                axis_forward='-Z',
+
+                axis_up='Y',
+
+                apply_scale_options='FBX_SCALE_ALL',
+
+                add_leaf_bones=False,
+
+                use_armature_deform_only=False,
+
+                bake_anim=False,
+
+                path_mode='AUTO',
+
+                embed_textures=False,
+
             )
 
-            tri_modifier.keep_custom_normals = True
+            print(f"Exported : {filepath}")
 
-        # ------------------------------------------
-        # Export FBX
-        # ------------------------------------------
+        except RuntimeError as e:
 
-        bpy.ops.export_scene.fbx(
-
-            filepath=filepath,
-
-            use_selection=True,
-
-            object_types={'MESH'},
-
-            use_mesh_modifiers=True,
-
-            mesh_smooth_type='FACE',
-
-            bake_space_transform=False,
-
-            axis_forward='-Z',
-
-            axis_up='Y',
-
-            apply_scale_options='FBX_SCALE_ALL',
-
-            add_leaf_bones=False,
-
-            use_armature_deform_only=False,
-
-            bake_anim=False,
-
-            path_mode='AUTO',
-
-            embed_textures=False,
-
-        )
-
-        # ------------------------------------------
-        # Remove Temporary Modifier
-        # ------------------------------------------
-
-        if tri_modifier:
-
-            plateau.modifiers.remove(
-                tri_modifier
+            raise RuntimeError(
+                f"Failed to export FBX:\n{e}"
             )
 
-        print(f"Exported : {filepath}")
+        finally:
+
+            if tri_modifier is not None:
+
+                if tri_modifier.name in plateau.modifiers:
+
+                    plateau.modifiers.remove(
+                        tri_modifier
+                    )
+
+            BlenderContext.object_mode()
+
+            bpy.context.view_layer.update()

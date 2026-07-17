@@ -1,82 +1,138 @@
 import bpy
-import bmesh
+
+from utils.blender_context import BlenderContext
 
 
-class Cleaner:
+class Clipper:
     """
-    Cleans Plateau and Bing meshes after clipping.
-
-    Current Operations:
-        - Remove Duplicate Vertices
-        - Recalculate Normals
+    Clips duplicated Plateau and Bing meshes
+    to the current GridCell.
     """
 
-    MERGE_DISTANCE = 0.0001
+    CLIP_MARGIN = 1.0
+    CLIP_HEIGHT = 5000.0
 
-    # -------------------------------------------------------
-    # Clean Both Meshes
-    # -------------------------------------------------------
+    # ---------------------------------------------------------
+    # Clip Both Meshes
+    # ---------------------------------------------------------
 
-    def clean(
+    def clip(
         self,
         plateau,
         bing,
+        cell,
     ):
 
-        print("\nCleaning Meshes")
+        print(f"\nClipping Chunk : {cell.label}")
 
-        self.clean_object(plateau)
+        cube = self.create_clip_box(cell)
 
-        self.clean_object(bing)
+        try:
 
-        print("Cleaning Finished")
+            self.boolean_object(
+                plateau,
+                cube,
+            )
 
-    # -------------------------------------------------------
-    # Clean One Object
-    # -------------------------------------------------------
+            self.boolean_object(
+                bing,
+                cube,
+            )
 
-    def clean_object(
+        finally:
+
+            if cube is not None and cube.name in bpy.data.objects:
+
+                bpy.data.objects.remove(
+                    cube,
+                    do_unlink=True,
+                )
+
+            BlenderContext.ensure_view_layer()
+
+        print("Clipping Finished")
+
+    # ---------------------------------------------------------
+    # Create Clip Box
+    # ---------------------------------------------------------
+
+    def create_clip_box(self, cell):
+
+        width = cell.max_x - cell.min_x
+        height = cell.max_y - cell.min_y
+
+        center_x = (cell.min_x + cell.max_x) * 0.5
+        center_y = (cell.min_y + cell.max_y) * 0.5
+
+        # DO NOT call object_mode() here.
+        # There may not be an active object yet.
+
+        BlenderContext.deselect_all()
+
+        bpy.ops.mesh.primitive_cube_add(
+            location=(center_x, center_y, 0)
+        )
+
+        cube = bpy.context.active_object
+
+        cube.name = "GeoBake_ClipBox"
+
+        cube.scale = (
+            (width + self.CLIP_MARGIN) * 0.5,
+            (height + self.CLIP_MARGIN) * 0.5,
+            self.CLIP_HEIGHT,
+        )
+
+        BlenderContext.ensure_view_layer()
+
+        return cube
+
+    # ---------------------------------------------------------
+    # Boolean One Object
+    # ---------------------------------------------------------
+
+    def boolean_object(
         self,
         obj,
+        cutter,
     ):
 
         if obj is None:
-            return
+            raise ValueError("Object is None.")
 
-        bpy.ops.object.select_all(action='DESELECT')
+        if cutter is None:
+            raise ValueError("Clip box is None.")
 
-        obj.select_set(True)
+        BlenderContext.activate(obj)
 
-        bpy.context.view_layer.objects.active = obj
+        old = obj.modifiers.get("GeoBakeBoolean")
+        if old:
+            obj.modifiers.remove(old)
 
-        if bpy.context.mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-
-        bpy.ops.object.mode_set(mode='EDIT')
-
-        bm = bmesh.from_edit_mesh(obj.data)
-
-        # ---------------------------------------
-        # Remove Duplicate Vertices
-        # ---------------------------------------
-
-        bmesh.ops.remove_doubles(
-            bm,
-            verts=bm.verts,
-            dist=self.MERGE_DISTANCE,
+        modifier = obj.modifiers.new(
+            name="GeoBakeBoolean",
+            type='BOOLEAN',
         )
 
-        # ---------------------------------------
-        # Recalculate Normals
-        # ---------------------------------------
+        modifier.operation = 'INTERSECT'
+        modifier.object = cutter
 
-        bmesh.ops.recalc_face_normals(
-            bm,
-            faces=bm.faces,
-        )
+        BlenderContext.ensure_view_layer()
 
-        bmesh.update_edit_mesh(obj.data)
+        try:
 
-        bpy.ops.object.mode_set(mode='OBJECT')
+            bpy.ops.object.modifier_apply(
+                modifier=modifier.name,
+            )
 
-        print(f"{obj.name} cleaned")
+            print(f"{obj.name} clipped")
+
+        except RuntimeError as e:
+
+            raise RuntimeError(
+                f"Boolean failed on '{obj.name}': {e}"
+            )
+
+        finally:
+
+            BlenderContext.ensure_view_layer()

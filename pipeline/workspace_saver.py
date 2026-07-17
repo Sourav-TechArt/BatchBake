@@ -9,7 +9,7 @@ class WorkspaceSaver:
     This acts as a recovery checkpoint.
     """
 
-    OUTPUT_FOLDER = r"C:\Users\ASUS\Downloads\GeoBake"
+    OUTPUT_FOLDER = r"E:\Work\MAP_Rnd\GeoBake\BatchBake"
 
     def save(self, cell):
 
