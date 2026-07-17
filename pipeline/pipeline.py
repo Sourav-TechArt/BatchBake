@@ -1,12 +1,18 @@
 from .workspace import Workspace
 from .clipper import Clipper
-from .cleaner import Cleaner
+
 from .uv_generator import UVGenerator
 from .workspace_saver import WorkspaceSaver
 from .baker import Baker
 from .exporter import Exporter
 from .cleanup import Cleanup
 
+try:
+    from .cleaner import Cleaner
+except Exception:
+    import traceback
+    traceback.print_exc()
+    raise
 
 class Pipeline:
     """
@@ -60,7 +66,7 @@ class Pipeline:
         # (Later these will come from UI)
         # ---------------------------------------
 
-        self.image_size = 8192
+        self.image_size = 1024
 
         self.samples = 10
 
@@ -73,10 +79,10 @@ class Pipeline:
             {"enabled": True, "distance": 2},
             {"enabled": True, "distance": 4},
             {"enabled": True, "distance": 6},
-            {"enabled": True, "distance": 8},
-            {"enabled": True, "distance": 10},
-            {"enabled": True, "distance": 12},
-            {"enabled": True, "distance": 16},
+            {"enabled": False, "distance": 8},
+            {"enabled": False, "distance": 10},
+            {"enabled": False, "distance": 12},
+            {"enabled": False, "distance": 16},
             {"enabled": False, "distance": 20},
 
         ]

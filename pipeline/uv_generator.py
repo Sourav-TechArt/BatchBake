@@ -7,24 +7,31 @@ class UVGenerator:
     """
     Generates UVs for the processed Plateau mesh.
 
-    V1
+    Workflow
         - Smart UV Project
         - Pack Islands
     """
 
-    SMART_UV_ANGLE = 66.0
-    ISLAND_MARGIN = 0.001
-    PACK_MARGIN = 0.001
-    ROTATE_ISLANDS = True
+    SMART_UV_ANGLE = 1.151917  # Its a Radian Value not degree as Blender use radian value not degree 
+    ISLAND_MARGIN = 0.0
+    PACK_MARGIN = 0.0
 
     # --------------------------------------------------
     # Generate UV
     # --------------------------------------------------
 
-    def generate(self, plateau):
+    def generate(
+        self,
+        plateau,
+    ):
 
         if plateau is None:
             raise ValueError("Plateau object is None.")
+
+        if plateau.name not in bpy.data.objects:
+            raise ValueError(
+                f"Object '{plateau.name}' no longer exists."
+            )
 
         print(f"\nGenerating UV : {plateau.name}")
 
@@ -38,11 +45,7 @@ class UVGenerator:
         # Enter Edit Mode
         # --------------------------------------------------
 
-        bpy.ops.object.mode_set(mode='EDIT')
-
-        # --------------------------------------------------
-        # Select All Faces
-        # --------------------------------------------------
+        BlenderContext.edit_mode()
 
         bpy.ops.mesh.select_all(action='SELECT')
 
@@ -52,11 +55,12 @@ class UVGenerator:
 
         bpy.ops.uv.smart_project(
             angle_limit=self.SMART_UV_ANGLE,
+            margin_method='SCALED',
             island_margin=self.ISLAND_MARGIN,
             area_weight=0.0,
             correct_aspect=True,
-            scale_to_bounds=False,
-        )
+            scale_to_bounds=True,
+)
 
         # --------------------------------------------------
         # Pack Islands
@@ -65,16 +69,22 @@ class UVGenerator:
         bpy.ops.uv.select_all(action='SELECT')
 
         bpy.ops.uv.pack_islands(
-            rotate=self.ROTATE_ISLANDS,
+            shape_method='CONCAVE',
+            rotate=True,
+            rotate_method='ANY',
+            scale=True,
+            margin_method='SCALED',
             margin=self.PACK_MARGIN,
+            merge_overlap=False,
+            udim_source='CLOSEST_UDIM',
         )
+
+        BlenderContext.ensure_view_layer()
 
         # --------------------------------------------------
         # Return To Object Mode
         # --------------------------------------------------
 
         BlenderContext.object_mode()
-
-        bpy.context.view_layer.update()
 
         print(f"{plateau.name} UV Finished")
