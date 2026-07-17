@@ -81,13 +81,7 @@ def main():
     # Test Only First Grid
     # --------------------------------------------------
 
-    print("\n==============================")
-    print("Testing First Grid")
-    print("==============================")
-
-    pipeline.process(
-        manager.cells[0]
-    )
+    pipeline.run(manager.cells)
 
     # --------------------------------------------------
     # Uncomment Later For Batch

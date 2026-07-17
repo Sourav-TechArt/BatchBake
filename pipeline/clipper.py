@@ -146,3 +146,4 @@ class Clipper:
         finally:
 
             BlenderContext.ensure_view_layer()
+

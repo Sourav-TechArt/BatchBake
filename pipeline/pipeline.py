@@ -14,6 +14,7 @@ except Exception:
     traceback.print_exc()
     raise
 
+
 class Pipeline:
     """
     GeoBake Processing Pipeline
@@ -63,7 +64,6 @@ class Pipeline:
 
         # ---------------------------------------
         # Temporary Settings
-        # (Later these will come from UI)
         # ---------------------------------------
 
         self.image_size = 1024
@@ -86,6 +86,26 @@ class Pipeline:
             {"enabled": False, "distance": 20},
 
         ]
+
+    # -------------------------------------------------------
+    # Mesh Validation
+    # -------------------------------------------------------
+
+    def has_mesh(self, obj):
+        """
+        Returns True if object contains usable mesh geometry.
+        """
+
+        if obj is None:
+            return False
+
+        if obj.type != "MESH":
+            return False
+
+        if len(obj.data.polygons) == 0:
+            return False
+
+        return True
 
     # -------------------------------------------------------
     # Process One Grid Cell
@@ -124,6 +144,28 @@ class Pipeline:
             cell,
 
         )
+
+        # ---------------------------------------
+        # Skip Empty Chunks
+        # ---------------------------------------
+
+        if not self.has_mesh(plateau_copy):
+
+            print(f"\nSkipping {cell.label}")
+            print("Reason : Empty Plateau mesh")
+
+            self.cleanup.delete()
+
+            return
+
+        if not self.has_mesh(bing_copy):
+
+            print(f"\nSkipping {cell.label}")
+            print("Reason : Empty Bing mesh")
+
+            self.cleanup.delete()
+
+            return
 
         # ---------------------------------------
         # Clean
@@ -223,7 +265,21 @@ class Pipeline:
             print(f"Chunk {index + 1} / {total}")
             print("----------------------------------------")
 
-            self.process(cell)
+            try:
+
+                self.process(cell)
+
+            except Exception as e:
+
+                print(f"\n✗ {cell.label} Failed")
+                print(e)
+
+                try:
+                    self.cleanup.delete()
+                except Exception:
+                    pass
+
+                continue
 
         print("\n========================================")
         print("GeoBake Batch Finished")
